@@ -10,22 +10,46 @@ Although `kathe` does this just fine, it does suffer from some unfortunate desig
 
 This is the latest attempt, with the `kathe-cli` tool currently being written in [Rust](https://www.rust-lang.org/), and the backend/API/web interface in [Golang](https://go.dev/). Why two languages? Because of personal preferences. ¯\\_(ツ)_/¯
 
-So, although `kathe-cli` already exists (sort of), for now my focus will be this document. Documenting every design choice and data-type. Because I'd rather be caught before my mistakes, love of overkill, and feature creep again get the better of me.
 
-## keys, types and context
 
-We are going to keep the design as simple as possible. To that end, we only have `context`, which will include what is currently `inputname`, `sha256` and `context` and `ssdeep`, which is used to create the graphs. Because we want to be able to pivot on any `context`, and we currently don't know what contexts we'll be adding in the future, every `context` will be a `zset`. The key name will be the unique context, the key value will be a `zset` (a non repeating collections of `Strings`, where every member has an associated score) of `ssdeep` hashes.
+``` shell
+./kathe --help
+kathe 0.5
+avuko
+kathe is a tool to correlate inputs based on ssdeep similarity
+TSV fields: "inputname"\t"md5"\t"sha1"\t"sha256"\t"ssdeep"\t"context[,context,...]"
+named after Katherine Johnson of NASA fame.
 
-To keep track (and literally: count) of what's in the db, we'll have two indexes, `index:context`, and `index:ssdeep`, both also `zset` types. 
+USAGE:
+    kathe [OPTIONS] --context <context> <--filepath <filepath>|--inputtsv>
 
-> [avuko] I wondered whether both are necessary. I can see the upside of having a count of contexts, so we can see how often we've seen a filename, how many entries are from a particular source, or how often we've seen a specific `sha256` in different sources. I don't think we'll want to know how often we've seen a particular ssdeep, but maybe we might want to somewhere down the line. And we do want to have a count of the number of unique `ssdeep` hashes, so an index is needed anyway. And if we create an `set` index, why not a `zset`, so we have that info when we want it?   
+OPTIONS:
+    -a, --auth <auth>              [default: redis]
+    -c, --context <context>        list,of,contexts
+    -d, --dbnumber <dbnumber>      [default: 7]
+    -f, --filepath <filepath>      Path to file to be parsed
+    -h, --help                     Print help information
+    -i, --inputtsv                 Parse a TSV from STDIN
+    -p, --port <port>              [default: 6379]
+    -r, --redishost <redishost>    [default: 127.0.0.1]
+    -V, --version                  Print version information
+```
 
-| key name      | value type               | redis type | example                                                      | context                                                      |
-| ------------- | ------------------------ | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| timestamp     | String [epoch.as_micros] | key        | `1651605418685632`                                           | Used to timestamp latest additions to the database, and be able to identify and remove stale caches. |
-| index:context | String + count           | zset       | `1) "fdddbbc09972a8da879209f8b45796b4343ffd8c74ae8e56bfe78aebc710777b`<br/>`2) "1"`<br/>`3) "2019-05-11"`<br/>`4) "1"`<br/>`5) "win.revil"`<br/>`6) "52"` |Used to keep count of all added contexts. Whatever we use to standardise/defang the strings while adding, should also be used before a lookup/search, so we don't miss things. Think uppercase/lowercase hashes, spaces etc.|
-|index:ssdeep|String + count|zset||Everything is stored as "context" under a ssdeep, but we want to make `sha256 ` special, so we can more easily pivot and search.|
-| |                                                              ||||
-|   |                          |            |                                                              |                                                              |
-|               |                          |            |                                                              |                                                              |
+This tool can also be used to stash the TSV in a redis store, but for now that is not used.
+
+```shell
+ls -1 Block.0095/ |wc -l
+40000
+
+
+time find Block.0095/ -type f | while read line; do ./kathe -c vxug,block.0095 -f "${line}" >> test.tsv ;done
+
+[...]
+
+real	10m4.346s
+user	8m39.796s
+sys	1m48.942s
+```
+
+Not to shabby for 40,000 samples, totalling 15.4 GB
 
