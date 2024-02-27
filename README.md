@@ -1,6 +1,6 @@
 # `kathe`
 
-Redesign of `kathe`, together with the people of NCSC-NL.
+Redesign of `kathe`, together with the people of [NCSC-NL.](https://github.com/ncsc-nl)
 
 ## A short history of `kathe`  
 
