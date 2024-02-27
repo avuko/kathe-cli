@@ -10,7 +10,7 @@ Although `kathe` does this just fine, it does suffer from some unfortunate desig
 
 This is the latest attempt, with the `kathe-cli` tool currently being written in [Rust](https://www.rust-lang.org/), and the backend/API/web interface in [Golang](https://go.dev/). Why two languages? Because of personal preferences. ¯\\_(ツ)_/¯
 
-
+This *cli* tool currently has all kinds of redis functionality which we'll probably strip out, as the backend/db is being redesigned with PostgreSQL. The TSV output will likely be stashed into the kathe DB via an API. 
 
 ``` shell
 ./kathe --help
@@ -51,5 +51,22 @@ user	8m39.796s
 sys	1m48.942s
 ```
 
-Not to shabby for 40,000 samples, totalling 15.4 GB
+Not too shabby for 40,000 samples, totalling 15.4 GB
+
+
+
+To set up Rust:
+
+```shell
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+To build for prod, in the repo:
+
+```shell
+cargo build --release
+
+file target/release/kathe
+target/release/kathe: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=a0a8523dd764ee6eb8c50dbbc96cbc26d329796b, for GNU/Linux 3.2.0, with debug_info, not stripped
+```
 
